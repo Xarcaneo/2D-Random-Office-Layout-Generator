@@ -8,6 +8,8 @@ using UnityEngine;
 /// </summary>
 public class BSPNode
 {
+    public static int IterationsCount { get; private set; } = 0;
+
     // The bounds of this node, represented as a RectInt (integer rectangle).
     private RectInt _bounds;
 
@@ -20,6 +22,15 @@ public class BSPNode
 
     // The minimum size that a room can be within this node.
     private int _minRoomSize;
+
+    // The adjusted minimum size of a room if corridor is removed.
+    private int _adjustedMinRoomSize;
+
+    // The random split chance to stop splitting.
+    private float _splitChance;
+
+    // The minimum number of iterations required before splits are influenced by chance, when corridors are not present.
+    private int _minIterationsCount;
 
     // The corridor created during the splitting process, represented as a RectInt.
     public RectInt corridor;
@@ -45,11 +56,19 @@ public class BSPNode
     /// <param name="bounds">The bounding rectangle for this node.</param>
     /// <param name="corridorWidth">The width of the corridors to be created between rooms.</param>
     /// <param name="minRoomSize">The minimum size of a room that can be created.</param>
-    public BSPNode(RectInt bounds, int corridorWidth, int minRoomSize)
+    /// <param name="adjustedMinRoomSize">The adjusted minimum size of a room after corridor removal.</param>
+    /// <param name="splitChance">The random chance (0-1) to stop splitting if the node count exceeds maxNodeCount.</param>
+    /// <param name="maxNodeCount">The maximum number of nodes before considering stopping further splits.</param>
+    public BSPNode(RectInt bounds, int corridorWidth, int minRoomSize, int adjustedMinRoomSize, float splitChance, int minIterationsCount)
     {
         _bounds = bounds; // Set the bounds of the node.
         _corridorWidth = corridorWidth; // Set the corridor width.
         _minRoomSize = minRoomSize; // Set the minimum room size.
+        _adjustedMinRoomSize = adjustedMinRoomSize; // Set the adjusted minimum room size.
+        _splitChance = splitChance; // Set the split chance.
+        _minIterationsCount = minIterationsCount; // Set the maximum node count.
+
+        IterationsCount++;
     }
 
     /// <summary>
@@ -58,10 +77,23 @@ public class BSPNode
     /// </summary>
     public void Split()
     {
-        // Check if the current region is too small to split further.
+        if (Random.value <= _splitChance && IterationsCount >= _minIterationsCount)
+        {
+            return;
+        }
+
+        // Check if the current region is too small to split further
         if (_bounds.width <= _minRoomSize * 2 + _corridorWidth && _bounds.height <= _minRoomSize * 2 + _corridorWidth)
         {
-            return; // Stop splitting if the area is too small.
+            if (_corridorWidth != 0)
+            {
+                _corridorWidth = 0;
+                _minRoomSize = _adjustedMinRoomSize;
+            }
+            else
+            {
+                return;
+            }
         }
 
         // Determine the direction of the split (horizontal or vertical).
@@ -123,10 +155,10 @@ public class BSPNode
         int splitY = Random.Range(_bounds.yMin + _minRoomSize, _bounds.yMax - _minRoomSize - _corridorWidth);
 
         // Create left child node from the lower part of the bounds.
-        _left = new BSPNode(new RectInt(_bounds.xMin, _bounds.yMin, _bounds.width, splitY - _bounds.yMin), _corridorWidth, _minRoomSize);
+        _left = new BSPNode(new RectInt(_bounds.xMin, _bounds.yMin, _bounds.width, splitY - _bounds.yMin), _corridorWidth, _minRoomSize, _adjustedMinRoomSize, _splitChance, _minIterationsCount);
 
         // Create right child node from the upper part of the bounds.
-        _right = new BSPNode(new RectInt(_bounds.xMin, splitY + _corridorWidth, _bounds.width, _bounds.yMax - splitY - _corridorWidth), _corridorWidth, _minRoomSize);
+        _right = new BSPNode(new RectInt(_bounds.xMin, splitY + _corridorWidth, _bounds.width, _bounds.yMax - splitY - _corridorWidth), _corridorWidth, _minRoomSize, _adjustedMinRoomSize, _splitChance, _minIterationsCount);
 
         // Create a horizontal corridor between the two child nodes.
         CreateHorizontalCorridor(splitY);
@@ -142,10 +174,10 @@ public class BSPNode
         int splitX = Random.Range(_bounds.xMin + _minRoomSize, _bounds.xMax - _minRoomSize - _corridorWidth);
 
         // Create left child node from the left part of the bounds.
-        _left = new BSPNode(new RectInt(_bounds.xMin, _bounds.yMin, splitX - _bounds.xMin, _bounds.height), _corridorWidth, _minRoomSize);
+        _left = new BSPNode(new RectInt(_bounds.xMin, _bounds.yMin, splitX - _bounds.xMin, _bounds.height), _corridorWidth, _minRoomSize, _adjustedMinRoomSize, _splitChance, _minIterationsCount);
 
         // Create right child node from the right part of the bounds.
-        _right = new BSPNode(new RectInt(splitX + _corridorWidth, _bounds.yMin, _bounds.xMax - splitX - _corridorWidth, _bounds.height), _corridorWidth, _minRoomSize);
+        _right = new BSPNode(new RectInt(splitX + _corridorWidth, _bounds.yMin, _bounds.xMax - splitX - _corridorWidth, _bounds.height), _corridorWidth, _minRoomSize, _adjustedMinRoomSize, _splitChance, _minIterationsCount);
 
         // Create a vertical corridor between the two child nodes.
         CreateVerticalCorridor(splitX);
@@ -184,4 +216,6 @@ public class BSPNode
         // Store the corridor bounds.
         corridor = corridorBounds;
     }
+
+    public void ResetNodeCount() => IterationsCount = 0;
 }

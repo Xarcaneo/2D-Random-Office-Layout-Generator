@@ -27,6 +27,12 @@ public class TilemapRendererComponent : CoreComponent
     private TileBase corridorTile;
 
     /// <summary>
+    /// The tile used for rendering grass.
+    /// </summary>
+    [SerializeField, Tooltip("The tile used for rendering grass.")]
+    private TileBase grassTile;
+
+    /// <summary>
     /// The <c>Tilemap</c> where tiles will be drawn.
     /// </summary>
     [SerializeField, Tooltip("The Tilemap where tiles will be drawn.")]
@@ -49,6 +55,9 @@ public class TilemapRendererComponent : CoreComponent
                 break;
             case TileType.Corridor:
                 tile = corridorTile;
+                break;
+            case TileType.Grass:
+                tile = grassTile;
                 break;
             default:
                 Debug.LogWarning("Unknown TileType, defaulting to Floor tile.");
@@ -86,4 +95,6 @@ public class TilemapRendererComponent : CoreComponent
             tilemap.SetTile(new Vector3Int(room.xMax, y, 0), wallTile);
         }
     }
+
+    public void ClearTilemaps() => tilemap.ClearAllTiles();
 }

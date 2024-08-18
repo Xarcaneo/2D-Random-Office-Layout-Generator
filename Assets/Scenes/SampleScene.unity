@@ -564,6 +564,7 @@ MonoBehaviour:
   wallTile: {fileID: 11400000, guid: a590fe2b27a6b66418f1b4b6b30ea008, type: 2}
   floorTile: {fileID: 11400000, guid: 543863088fb26c742a83af96a95e1e5d, type: 2}
   corridorTile: {fileID: 11400000, guid: cd0131a16a5e7b14597915fb97176131, type: 2}
+  grassTile: {fileID: 11400000, guid: 65e5e5a7e69c157489d9126dff39a9fa, type: 2}
   tilemap: {fileID: 1092848984}
 --- !u!1 &1947853994
 GameObject:
@@ -610,8 +611,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc6002f017b9364498076b0b7f0312dd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  corridorWidth: 10
-  minimalRoomSize: 20
+  corridorWidth: 20
+  minimalRoomSize: 70
+  dungeonSize: {x: 600, y: 600}
+  FreeSpaceSize: 50
+  adjustedMinRoomSize: 45
+  splitChance: 0.2
+  minIterationsCount: 40
 --- !u!1 &2084654953
 GameObject:
   m_ObjectHideFlags: 0

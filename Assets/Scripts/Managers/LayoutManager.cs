@@ -21,6 +21,35 @@ public class LayoutManager : MonoBehaviour
     [SerializeField, Tooltip("The minimum size of rooms in the generated layout.")]
     private int minimalRoomSize = 25;
 
+    /// <summary>
+    /// The size of the dungeon in tiles.
+    /// </summary>
+    [SerializeField, Tooltip("The size of the dungeon in tiles.")]
+    protected Vector2Int dungeonSize = new Vector2Int(150, 150);
+
+    /// <summary>
+    /// The minimum size of rooms in the generated layout.
+    /// </summary>
+    [SerializeField, Tooltip("The minimum size of rooms in the generated layout.")]
+    private int FreeSpaceSize = 5; // Buffer space around the dungeon
+
+    /// <summary>
+    /// The adjusted minimum size of the rooms after the corridor is removed.
+    /// </summary>
+    [SerializeField, Tooltip("The adjusted minimum size of the rooms after the corridor is removed.")]
+    private int adjustedMinRoomSize;
+
+    /// <summary>
+    /// The random chance (0-1) to stop splitting when the node count exceeds the maximum.
+    /// </summary>
+    [SerializeField, Tooltip("The random chance (0-1) to stop splitting when the node count exceeds the maximum.")]
+    private float splitChance;
+
+    /// <summary>
+    /// The minimum number of iterations required before splits are influenced by chance, when corridors are not present.
+    /// </summary>
+    [SerializeField, Tooltip("The minimum number of iterations required before splits are influenced by chance, when corridors are not present.")]
+    private int minIterationsCount;
 
     /// <summary>
     /// Reference to the <c>Core</c> class that manages the core components of the layout.
@@ -35,23 +64,35 @@ public class LayoutManager : MonoBehaviour
     {
         Core = GetComponentInChildren<Core>();
         Core.Initialize();
+        GenerateLayout();
+    }
 
-        // Define the bounds of the layout area
-        var bounds = new RectInt(0, 0, 200, 200);
+    /// <summary>
+    /// Initializes and sets up the BSP tree and generates the layout.
+    /// </summary>
+    public void GenerateLayout()
+    {
+        Core.GetCoreComponent<TilemapRendererComponent>().ClearTilemaps();
 
-        // Create the root node of the BSP tree with the defined bounds
-        var bspNode = new BSPNode(bounds, corridorWidth, minimalRoomSize);
+        // Adjust the bounds to account for the free space buffer.
+        var bounds = new RectInt(FreeSpaceSize, FreeSpaceSize,
+                                 dungeonSize.x - 2 * FreeSpaceSize,
+                                 dungeonSize.y - 2 * FreeSpaceSize);
 
-        // Split the BSP node to create rooms and corridors
+        // Initialize the root node with the extended bounds.
+        var bspNode = new BSPNode(bounds, corridorWidth, minimalRoomSize, adjustedMinRoomSize, splitChance, minIterationsCount);
+        bspNode.ResetNodeCount();
+
+        // Split the BSP node to create rooms and corridors.
         bspNode.Split();
 
-        // Collect all nodes from the BSP tree, including nodes with corridors
+        // Collect all nodes from the BSP tree, including nodes with corridors.
         List<BSPNode> allNodes = CollectAllNodes(bspNode);
 
-        // Collect only the leaf nodes that represent individual rooms
+        // Collect only the leaf nodes that represent individual rooms.
         List<BSPNode> leafNodes = CollectLeafNodes(bspNode);
 
-        // Draw the layout on the tilemap using the collected nodes
+        // Draw the layout on the tilemap using the collected nodes.
         Draw(leafNodes, allNodes, bounds);
     }
 
@@ -107,13 +148,28 @@ public class LayoutManager : MonoBehaviour
     /// <param name="bounds">The bounds of the entire layout area.</param>
     private void Draw(List<BSPNode> leafNodes, List<BSPNode> allNodes, RectInt bounds)
     {
+        // Define the outer bounds where grass should be drawn
+        var outerBounds = new RectInt(0, 0, dungeonSize.x, dungeonSize.y);
+
+        // Iterate through the outer bounds and fill the area outside the dungeon with grass
+        for (int x = outerBounds.xMin; x < outerBounds.xMax; x++)
+        {
+            for (int y = outerBounds.yMin; y < outerBounds.yMax; y++)
+            {
+                if (!bounds.Contains(new Vector2Int(x, y)))
+                {
+                    Core.GetCoreComponent<TilemapRendererComponent>().DrawRect(new RectInt(x, y, 1, 1), TileType.Grass);
+                }
+            }
+        }
+
         // Draw walls around the entire layout bounds
         Core.GetCoreComponent<TilemapRendererComponent>().DrawWalls(bounds);
 
         // Draw corridors in the layout
         foreach (var node in allNodes)
         {
-            Core.GetCoreComponent<TilemapRendererComponent>().DrawRect(node.Bounds, TileType.Corridor);
+            Core.GetCoreComponent<TilemapRendererComponent>().DrawRect(node.corridor, TileType.Corridor);
         }
 
         // Draw rooms and walls around individual rooms

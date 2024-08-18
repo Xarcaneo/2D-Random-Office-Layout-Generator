@@ -26,5 +26,10 @@ public enum TileType
     /// <summary>
     /// Represents a corridor tile in the grid.
     /// </summary>
-    Corridor
+    Corridor,
+
+    /// <summary>
+    /// Represents a grass tile in the grid.
+    /// </summary>
+    Grass
 }
