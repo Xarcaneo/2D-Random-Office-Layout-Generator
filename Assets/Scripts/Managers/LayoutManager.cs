@@ -10,6 +10,11 @@ using UnityEngine.Tilemaps;
 public class LayoutManager : MonoBehaviour
 {
     /// <summary>
+    /// The name of the child GameObject that contains the door elements within the room.
+    /// </summary>
+    const string childNameForDoors = "Doors";
+
+    /// <summary>
     /// The width of the corridors in the generated layout.
     /// </summary>
     [SerializeField, Tooltip("The width of the corridors in the generated layout.")]
@@ -52,6 +57,18 @@ public class LayoutManager : MonoBehaviour
     private int minIterationsCount;
 
     /// <summary>
+    /// The parent GameObject that contains all the child objects for the room,
+    /// such as interiors, doors, and items.
+    /// </summary>
+    [SerializeField, Tooltip("Parent GameObject containing child objects like interiors, doors, and items.")]
+    private GameObject elementsContainer;
+
+    /// <summary>
+    /// A 2D array representing the grid of the dungeon, where each cell stores the type of tile placed at that position.
+    /// </summary>
+    protected TileType[,] grid;
+
+    /// <summary>
     /// Reference to the <c>Core</c> class that manages the core components of the layout.
     /// </summary>
     private Core Core { get; set; }
@@ -72,7 +89,11 @@ public class LayoutManager : MonoBehaviour
     /// </summary>
     public void GenerateLayout()
     {
+        Transform doorsTransform = GetOrCreateChildTransform(childNameForDoors);
+
+        ClearGrid();
         Core.GetCoreComponent<TilemapRendererComponent>().ClearTilemaps();
+        Core.GetCoreComponent<EntranceCreatorComponent>().RemoveDoors(doorsTransform);
 
         // Adjust the bounds to account for the free space buffer.
         var bounds = new RectInt(FreeSpaceSize, FreeSpaceSize,
@@ -94,6 +115,16 @@ public class LayoutManager : MonoBehaviour
 
         // Draw the layout on the tilemap using the collected nodes.
         Draw(leafNodes, allNodes, bounds);
+
+        // Collect room bounds for door placement
+        List<RectInt> roomBounds = new List<RectInt>();
+        foreach (var node in leafNodes)
+        {
+            roomBounds.Add(node.Bounds);
+        }
+
+        // Pass the grid and room bounds to the EntranceCreatorComponent
+        Core.GetCoreComponent<EntranceCreatorComponent>().PlaceDoors(grid, roomBounds, doorsTransform);
     }
 
     /// <summary>
@@ -158,25 +189,54 @@ public class LayoutManager : MonoBehaviour
             {
                 if (!bounds.Contains(new Vector2Int(x, y)))
                 {
-                    Core.GetCoreComponent<TilemapRendererComponent>().DrawRect(new RectInt(x, y, 1, 1), TileType.Grass);
+                    Core.GetCoreComponent<TilemapRendererComponent>().DrawRect(new RectInt(x, y, 1, 1), TileType.Grass, grid);
                 }
             }
         }
 
         // Draw walls around the entire layout bounds
-        Core.GetCoreComponent<TilemapRendererComponent>().DrawWalls(bounds);
+        Core.GetCoreComponent<TilemapRendererComponent>().DrawWalls(bounds, grid);
 
         // Draw corridors in the layout
         foreach (var node in allNodes)
         {
-            Core.GetCoreComponent<TilemapRendererComponent>().DrawRect(node.corridor, TileType.Corridor);
+            Core.GetCoreComponent<TilemapRendererComponent>().DrawRect(node.corridor, TileType.Corridor, grid);
         }
 
         // Draw rooms and walls around individual rooms
         foreach (var node in leafNodes)
         {
-            Core.GetCoreComponent<TilemapRendererComponent>().DrawRect(node.Bounds, TileType.Floor);
-            Core.GetCoreComponent<TilemapRendererComponent>().DrawWalls(node.Bounds);
+            Core.GetCoreComponent<TilemapRendererComponent>().DrawRect(node.Bounds, TileType.Floor, grid);
+            Core.GetCoreComponent<TilemapRendererComponent>().DrawWalls(node.Bounds, grid);
         }
+    }
+
+    private void ClearGrid()
+    {
+        grid = new TileType[dungeonSize.x, dungeonSize.y];
+        for (int x = 0; x < dungeonSize.x; x++)
+        {
+            for (int y = 0; y < dungeonSize.y; y++)
+            {
+                grid[x, y] = TileType.Null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Finds or creates a child GameObject with the specified name under the main Dungeon GameObject.
+    /// </summary>
+    /// <param name="childName">The name of the child GameObject to find or create.</param>
+    /// <returns>The Transform of the found or newly created child GameObject.</returns>
+    protected Transform GetOrCreateChildTransform(string childName)
+    {
+        Transform childTransform = elementsContainer.transform.Find(childName);
+        if (childTransform == null)
+        {
+            GameObject child = new GameObject(childName);
+            child.transform.SetParent(elementsContainer.transform);
+            childTransform = child.transform;
+        }
+        return childTransform;
     }
 }

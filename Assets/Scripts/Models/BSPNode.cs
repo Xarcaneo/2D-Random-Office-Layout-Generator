@@ -151,8 +151,8 @@ public class BSPNode
     /// </summary>
     private void SplitHorizontally()
     {
-        // Determine the Y-coordinate for the split, ensuring there is enough space for rooms and the corridor.
-        int splitY = Random.Range(_bounds.yMin + _minRoomSize, _bounds.yMax - _minRoomSize - _corridorWidth);
+        // Determine the Y-coordinate for the split with stepped increments (e.g., 10 cm increments).
+        int splitY = StepIncrement(Random.Range(_bounds.yMin + _minRoomSize, _bounds.yMax - _minRoomSize - _corridorWidth));
 
         // Create left child node from the lower part of the bounds.
         _left = new BSPNode(new RectInt(_bounds.xMin, _bounds.yMin, _bounds.width, splitY - _bounds.yMin), _corridorWidth, _minRoomSize, _adjustedMinRoomSize, _splitChance, _minIterationsCount);
@@ -170,8 +170,8 @@ public class BSPNode
     /// </summary>
     private void SplitVertically()
     {
-        // Determine the X-coordinate for the split, ensuring there is enough space for rooms and the corridor.
-        int splitX = Random.Range(_bounds.xMin + _minRoomSize, _bounds.xMax - _minRoomSize - _corridorWidth);
+        // Determine the X-coordinate for the split with stepped increments (e.g., 10 cm increments).
+        int splitX = StepIncrement(Random.Range(_bounds.xMin + _minRoomSize, _bounds.xMax - _minRoomSize - _corridorWidth));
 
         // Create left child node from the left part of the bounds.
         _left = new BSPNode(new RectInt(_bounds.xMin, _bounds.yMin, splitX - _bounds.xMin, _bounds.height), _corridorWidth, _minRoomSize, _adjustedMinRoomSize, _splitChance, _minIterationsCount);
@@ -181,6 +181,16 @@ public class BSPNode
 
         // Create a vertical corridor between the two child nodes.
         CreateVerticalCorridor(splitX);
+    }
+
+    /// <summary>
+    /// Steps the given value to the nearest increment.
+    /// </summary>
+    /// <param name="value">The value to step.</param>
+    /// <returns>The stepped value.</returns>
+    private int StepIncrement(int value, int step = 10)
+    {
+        return Mathf.RoundToInt(value / (float)step) * step;
     }
 
     /// <summary>

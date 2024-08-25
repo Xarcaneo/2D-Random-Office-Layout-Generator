@@ -19,9 +19,9 @@ public enum TileType
     Floor,
 
     /// <summary>
-    /// Represents a entrance tile in the grid.
+    /// Represents a door tile in the grid.
     /// </summary>
-    Entrance,
+    Door,
 
     /// <summary>
     /// Represents a corridor tile in the grid.
